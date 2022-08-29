@@ -25,6 +25,32 @@ pub enum Entity {
     Bullet,
 }
 
+impl Entity {
+    //todo: maybe should be moved to Lane? (as Entity should probabbly not know about the lane logic and fields...)
+    fn move_zombie(mut current_field: Field, mut opt_prev_field: Option<Field>) -> (Field, Option<Field>) {
+        match opt_prev_field {
+            Some(Field(mut prev_field)) => {
+                let field_is_empty = prev_field.len() == 0;
+                if field_is_empty {
+                    current_field.pop_front();
+                    prev_field.push_back(Entity::Zombie);
+
+                    return (current_field, Some(Field(prev_field)));
+                } else {
+                    //todo:
+                    return (current_field, Some(Field(prev_field)));
+                }
+            },
+            None => {
+                //todo:
+                //end of lane, hit player
+                current_field.pop_front();
+                return (current_field, None);
+            }
+        }
+    }
+}
+
 // inital state
 impl std::default::Default for State {
     fn default() -> Self {
@@ -81,20 +107,11 @@ impl State {
 
             match current_field[0] {
                 Entity::Zombie => {
-                    match opt_prev_field {
-                        Some(Field(mut prev_field)) => {
-                            if prev_field.len() == 0 {
-                                current_field.pop_front();
-                                lane[i] = Field(current_field);
+                    let (z_current, z_prev) = Entity::move_zombie(Field(current_field), opt_prev_field);
 
-                                prev_field.push_back(Entity::Zombie);
-                                lane[i-1] = Field(prev_field);
-                            }
-                        },
-                        None => {
-                            //todo:
-                            //end of lane, hit player, remove zombie
-                        }
+                    lane[i] = z_current;
+                    if i > 0 && z_prev != None {
+                        lane[i-1] = z_prev.unwrap();
                     }
                 }
                 _ => {}
@@ -139,6 +156,11 @@ impl core::ops::Deref for Field {
     type Target = VecDeque<Entity>;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+impl core::ops::DerefMut for Field {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
