@@ -16,7 +16,7 @@ pub struct Grid([Option<Lane>; 5]);
 pub struct Lane([Field; 9]);
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct Field(VecDeque<Entity>);
+pub struct Field(pub VecDeque<Entity>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Entity {
@@ -55,11 +55,33 @@ impl Entity {
 impl std::default::Default for State {
     fn default() -> Self {
         State::new()
+        // State {
+        //     grid: Grid([
+        //         None,
+        //         None,
+        //         Some(Lane([
+        //             Field(VecDeque::new()),
+        //             Field(VecDeque::new()),
+        //             Field(VecDeque::new()),
+        //             Field(VecDeque::new()),
+        //             Field(VecDeque::new()),
+        //             Field(VecDeque::new()),
+        //             Field(VecDeque::new()),
+        //             // Field(VecDeque::new()),
+        //             // Field(VecDeque::new()),
+        //             Field(VecDeque::from([Entity::Zombie])),
+        //             Field(VecDeque::from([Entity::Zombie])),
+        //         ])),
+        //         None,
+        //         None,
+        //     ]),
+        //     tick_interval_ms: 700,
+        // }
     }
 }
 
 impl State {
-    fn new() -> State {
+    pub fn new() -> State {
         State {
             tick_interval_ms: 700,
             // lane: Lane(Default::default()), //needs #[derive(Default)] on Field
@@ -188,6 +210,7 @@ mod tests {
                 None,
                 None,
             ]),
+            // tick_interval_ms: 799,
             ..Default::default()
         };
 
@@ -224,7 +247,8 @@ mod tests {
                 None,
                 None,
             ]),
-            ..Default::default()
+            tick_interval_ms: 700,
+            // ..Default::default()
         };
 
         let mut grid = state.clone().grid;
