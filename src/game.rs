@@ -92,8 +92,8 @@ impl std::default::Default for State {
             tick: 0,
             tick_interval_ms: 700,
             spawn_rates: SpawnRates {
-                zombies_each_x_ticks: 2,
-                bullets_each_x_ticks: 1,
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 2,
             },
             grid: Grid([
                 None,
