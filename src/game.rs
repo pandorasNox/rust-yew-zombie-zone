@@ -38,54 +38,6 @@ struct SpawnRates {
     bullets_each_x_ticks: Tick,
 }
 
-impl Entity {
-    //todo: maybe should be moved to Lane? (as Entity should probabbly not know about the lane logic and fields...)
-    fn move_zombie(
-        entity: Entity,
-        current_tick: Tick,
-        mut current_field: Field,
-        mut opt_prev_field: Option<Field>,
-    ) -> (Field, Option<Field>) {
-        match opt_prev_field {
-            None => {
-                /* prev is end of lane */
-                //todo:
-                //end of lane, hit player
-                current_field.pop_front();
-                return (current_field, None);
-            }
-            Some(Field(mut prev_field)) => {
-                match prev_field.front() {
-                    None | Some(Entity::Collision) => {
-                        /* prev is empty */
-                        current_field.pop_front();
-                        prev_field.push_back(Entity::Zombie(current_tick));
-                        return (current_field, Some(Field(prev_field)));
-                    }
-                    Some(Entity::Bullet(_)) => {
-                        /* zombie walks into the bullet */
-                        current_field.pop_front();
-                        prev_field.pop_front();
-                        prev_field.push_front(Entity::Collision);
-                        return (current_field, Some(Field(prev_field)));
-                    }
-                    Some(Entity::Turret) => {
-                        /* zombie walks over turret */
-                        current_field.pop_front();
-                        prev_field.pop_front();
-                        prev_field.push_back(Entity::Zombie(current_tick));
-                        return (current_field, Some(Field(prev_field)));
-                    }
-                    _ => {
-                        //todo:
-                        return (current_field, Some(Field(prev_field)));
-                    }
-                }
-            }
-        }
-    }
-}
-
 // inital state
 impl std::default::Default for State {
     fn default() -> Self {
@@ -213,7 +165,7 @@ impl State {
                     continue;
                 }
                 Some(Entity::Zombie(last_moved_tick)) => {
-                    let (z_current, z_prev) = Entity::move_zombie(
+                    let (z_current, z_prev) = Lane::move_zombie(
                         Entity::Zombie(*last_moved_tick),
                         tick,
                         Field(current_field),
@@ -277,6 +229,51 @@ impl State {
 }
 
 impl Lane {
+    fn move_zombie(
+        entity: Entity,
+        current_tick: Tick,
+        mut current_field: Field,
+        mut opt_prev_field: Option<Field>,
+    ) -> (Field, Option<Field>) {
+        match opt_prev_field {
+            None => {
+                /* prev is end of lane */
+                //todo:
+                //end of lane, hit player
+                current_field.pop_front();
+                return (current_field, None);
+            }
+            Some(Field(mut prev_field)) => {
+                match prev_field.front() {
+                    None | Some(Entity::Collision) => {
+                        /* prev is empty */
+                        current_field.pop_front();
+                        prev_field.push_back(Entity::Zombie(current_tick));
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                    Some(Entity::Bullet(_)) => {
+                        /* zombie walks into the bullet */
+                        current_field.pop_front();
+                        prev_field.pop_front();
+                        prev_field.push_front(Entity::Collision);
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                    Some(Entity::Turret) => {
+                        /* zombie walks over turret */
+                        current_field.pop_front();
+                        prev_field.pop_front();
+                        prev_field.push_back(Entity::Zombie(current_tick));
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                    _ => {
+                        //todo:
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                }
+            }
+        }
+    }
+
     fn move_bullet(
         entity_last_moved_tick: Tick,
         current_tick: Tick,
