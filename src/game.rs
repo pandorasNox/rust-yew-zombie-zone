@@ -78,7 +78,7 @@ impl std::default::Default for State {
                 None,
                 None,
                 Some(Lane([
-                    Field(VecDeque::from([Entity::Bullet(0)])),
+                    Field(VecDeque::from([Entity::Turret])),
                     Field(VecDeque::new()),
                     Field(VecDeque::new()),
                     Field(VecDeque::new()),
