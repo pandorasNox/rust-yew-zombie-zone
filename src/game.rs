@@ -169,16 +169,14 @@ impl Lane {
 
         match opt_next_field.clone() {
             Some(Field(mut next_field)) => {
-                if next_field.is_empty() {
-                    current_field.pop_front();
-                    next_field.push_back(Entity::Bullet(current_tick));
-
-                    return (current_field, Some(Field(next_field)));
-                }
-
-                match next_field[0] {
-                    _ => {
-                        //todo
+                match next_field.front() {
+                    None | Some(Entity::Bullet(_)) => {
+                        current_field.pop_front();
+                        next_field.push_back(Entity::Bullet(current_tick));
+    
+                        return (current_field, Some(Field(next_field)));
+                    }
+                    _ => { //todo
                         (current_field, opt_next_field)
                     }
                 }
@@ -313,6 +311,48 @@ mod tests {
         assert_eq!(&Field(VecDeque::from([Entity::Zombie(2)])), &third_lane.0[5]);
     }
 
+    #[test]
+    fn two_zombies_leaves_lane() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Zombie(0)])),
+                    Field(VecDeque::from([Entity::Zombie(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+            // ..Default::default()
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(&Field(VecDeque::from([Entity::Zombie(0)])), &third_lane.0[0]);
+        assert_eq!(&Field(VecDeque::from([Entity::Zombie(0)])), &third_lane.0[1]);
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!( &true, &third_lane.0[1].is_empty() );
+        assert_eq!(&Field(VecDeque::from([Entity::Zombie(1)])), &third_lane.0[0]);
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!( &true, &third_lane.0[0].is_empty() );
+        assert_eq!( &true, &third_lane.0[1].is_empty() );
+    }
 
     #[test]
     fn one_bullet_move_right() {
@@ -352,6 +392,49 @@ mod tests {
         grid = state.grid.clone();
         third_lane = grid[2].as_ref().unwrap();
         assert_eq!(&Field(VecDeque::from([Entity::Bullet(2)])), &third_lane.0[2]);
+    }
+
+    #[test]
+    fn two_bullets_move_right() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Bullet(0)])),
+                    Field(VecDeque::from([Entity::Bullet(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(0)])), &third_lane.0[0]);
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(0)])), &third_lane.0[1]);
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!(&true, &third_lane.0[0].is_empty() );
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(1)])), &third_lane.0[1]);
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(1)])), &third_lane.0[2]);
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(2)])), &third_lane.0[2]);
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(2)])), &third_lane.0[3]);
     }
 
     //todo:
