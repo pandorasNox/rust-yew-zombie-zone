@@ -354,4 +354,8 @@ mod tests {
         assert_eq!(&Field(VecDeque::from([Entity::Bullet(2)])), &third_lane.0[2]);
     }
 
+    //todo:
+    //  - test zombie moves out of lane
+    //  - test bullet flighs out of lane
+
 }
