@@ -130,23 +130,27 @@ impl State {
             let Field(mut current_field) = lane[i].clone();
             let opt_prev_field = if i == 0 {None} else {Some(lane[i-1].clone())};
             let i_next = i+1;
-            let opt_next_field = if i_next > lane.len() -1 {None} else {Some(lane[i_next].clone())};
+            let opt_next_field = if i_next >= lane.len() {None} else {Some(lane[i_next].clone())};
 
-            if current_field.len() == 0 {
-                continue;
-            }
-
-            match current_field[0] {
-                Entity::Zombie(last_moved_tick) => {
-                    let (z_current, z_prev) = Entity::move_zombie(Entity::Zombie(last_moved_tick), tick, Field(current_field), opt_prev_field);
+            match current_field.front() {
+                None => {
+                    continue;
+                }
+                Some(Entity::Zombie(last_moved_tick)) => {
+                    let (z_current, z_prev) = Entity::move_zombie(Entity::Zombie(*last_moved_tick), tick, Field(current_field), opt_prev_field);
 
                     lane[i] = z_current;
                     if i > 0 && z_prev != None {
                         lane[i-1] = z_prev.unwrap();
                     }
                 }
-                Entity::Bullet(last_moved_tick) => {
-                    let (b_current, b_next) = Lane::move_bullet(last_moved_tick, tick, Field(current_field), opt_next_field);
+                Some(Entity::Bullet(last_moved_tick)) => {
+                    let (b_current, b_next) = Lane::move_bullet(
+                        *last_moved_tick,
+                        tick,
+                        Field(current_field),
+                        opt_next_field,
+                    );
 
                     lane[i] = b_current;
                     if i_next < lane.len() && b_next != None {
@@ -182,7 +186,8 @@ impl Lane {
                 }
             }
             None => {
-                (current_field, opt_next_field)
+                current_field.pop_front();
+                return (current_field, opt_next_field);
             }
         }
     }
@@ -437,8 +442,46 @@ mod tests {
         assert_eq!(&Field(VecDeque::from([Entity::Bullet(2)])), &third_lane.0[3]);
     }
 
-    //todo:
-    //  - test zombie moves out of lane
-    //  - test bullet flighs out of lane
+    #[test]
+    fn bullets_leave_the_lane() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::from([Entity::Bullet(0)])),
+                    Field(VecDeque::from([Entity::Bullet(0)])),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(0)])), &third_lane.0[7]);
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(0)])), &third_lane.0[8]);
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!(&true, &third_lane.0[7].is_empty() );
+        assert_eq!(&Field(VecDeque::from([Entity::Bullet(1)])), &third_lane.0[8]);
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!(&true, &third_lane.0[7].is_empty() );
+        assert_eq!(&true, &third_lane.0[8].is_empty() );
+    }
 
 }
