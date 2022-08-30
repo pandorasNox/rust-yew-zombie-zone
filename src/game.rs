@@ -197,6 +197,11 @@ impl Lane {
 
                         return (current_field, Some(Field(next_field)));
                     }
+                    Some(Entity::Zombie(_)) => { /* hit zombie */
+                        current_field.pop_front();
+                        next_field.pop_front();
+                        return (current_field, Some(Field(next_field)));
+                    }
                     _ => {
                         //todo
                         (current_field, opt_next_field)
@@ -562,5 +567,50 @@ mod tests {
         third_lane = grid[2].as_ref().unwrap();
         assert_eq!(&true, &third_lane.0[7].is_empty());
         assert_eq!(&true, &third_lane.0[8].is_empty());
+    }
+
+    #[test]
+    fn bullet_hits_zombie() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::new()),
+                    Field(VecDeque::from([Entity::Bullet(0)])),
+                    Field(VecDeque::from([Entity::Zombie(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Bullet(0)])),
+            &third_lane.0[1]
+        );
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Zombie(0)])),
+            &third_lane.0[2]
+        );
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!(&true, &third_lane.0[0].is_empty());
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+        assert_eq!(&true, &third_lane.0[2].is_empty());
+        assert_eq!(&true, &third_lane.0[3].is_empty());
     }
 }
