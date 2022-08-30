@@ -67,6 +67,13 @@ impl Entity {
                         prev_field.pop_front();
                         return (current_field, Some(Field(prev_field)));
                     }
+                    Some(Entity::Turret) => {
+                        /* zombie walks over turret */
+                        current_field.pop_front();
+                        prev_field.pop_front();
+                        prev_field.push_back(Entity::Zombie(current_tick));
+                        return (current_field, Some(Field(prev_field)));
+                    }
                     _ => {
                         //todo:
                         return (current_field, Some(Field(prev_field)));
@@ -293,7 +300,9 @@ impl Lane {
         mut current_field: Field,
         mut opt_next_field: Option<Field>,
     ) -> (Field, Option<Field>) {
-        if current_tick % spawn_rates.bullets_each_x_ticks != 0 {
+        if spawn_rates.bullets_each_x_ticks == 0 ||
+            current_tick % spawn_rates.bullets_each_x_ticks != 0
+        {
             return (current_field, opt_next_field);
         }
 
@@ -1048,4 +1057,58 @@ mod tests {
         );
 
     }
+
+    #[test]
+    fn zombie_hits_turret() {
+        let mut state = State {
+            tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 0,
+                bullets_each_x_ticks: 0,
+            },
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Turret])),
+                    Field(VecDeque::from([Entity::Zombie(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Turret])),
+            &third_lane.0[0]
+        );
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Zombie(0)])),
+            &third_lane.0[1]
+        );
+
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Zombie(1)])),
+            &third_lane.0[0]
+        );
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+    }
+
 }
