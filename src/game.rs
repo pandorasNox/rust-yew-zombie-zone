@@ -27,6 +27,7 @@ pub enum Entity {
     Zombie(LastMovedTick),
     Turret,
     Bullet(LastMovedTick),
+    Collision,
 }
 
 type LastMovedTick = Tick;
@@ -55,7 +56,7 @@ impl Entity {
             }
             Some(Field(mut prev_field)) => {
                 match prev_field.front() {
-                    None => {
+                    None | Some(Entity::Collision) => {
                         /* prev is empty */
                         current_field.pop_front();
                         prev_field.push_back(Entity::Zombie(current_tick));
@@ -65,6 +66,7 @@ impl Entity {
                         /* zombie walks into the bullet */
                         current_field.pop_front();
                         prev_field.pop_front();
+                        prev_field.push_front(Entity::Collision);
                         return (current_field, Some(Field(prev_field)));
                     }
                     Some(Entity::Turret) => {
@@ -190,6 +192,8 @@ impl State {
     }
 
     fn lane_next(mut lane: Lane, tick: u32, spawn_rates: &SpawnRates) -> Lane {
+        lane = State::remove_lane_collisions(lane);
+
         for i in 0..lane.len() {
             let Field(mut current_field) = lane[i].clone();
             let opt_prev_field = if i == 0 {
@@ -253,6 +257,23 @@ impl State {
 
         lane
     }
+
+    fn remove_lane_collisions(mut lane: Lane) -> Lane {
+        for i in 0..lane.len() {
+            let mut field = (&lane[i]).clone();
+
+            match field.front() {
+                Some(Entity::Collision) => {
+                    field.pop_front();
+                    lane[i] = field;
+                }
+                _ => {}
+            }
+
+        }
+
+        return lane;
+    }
 }
 
 impl Lane {
@@ -279,6 +300,7 @@ impl Lane {
                         /* hit zombie */
                         current_field.pop_front();
                         next_field.pop_front();
+                        next_field.push_front(Entity::Collision);
                         return (current_field, Some(Field(next_field)));
                     }
                     _ => {
@@ -320,6 +342,7 @@ impl Lane {
                     }
                     Some(Entity::Zombie(_)) => {
                         next_field.pop_front();
+                        next_field.push_front(Entity::Collision);
                         return (current_field, Some(next_field));
                     }
                     _ => {

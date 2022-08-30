@@ -91,6 +91,9 @@ fn grid() -> Html {
                         game::Entity::Bullet(_) => {
                             fields.push(html! {<div>{"°"}</div>});
                         }
+                        game::Entity::Collision => {
+                            fields.push(html! {<div>{"x"}</div>});
+                        }
                     }
                 }
             }
