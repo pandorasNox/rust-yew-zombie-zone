@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use log::{info};
+use log::info;
 use yew::{prelude::*, virtual_dom::VNode};
 use yewdux::prelude::*;
 
@@ -77,23 +77,29 @@ fn grid() -> Html {
                     let game::Field(field) = lane[i].clone();
 
                     if field.len() == 0 {
-                        fields.push(html!{ <div>{"_"}</div> });
+                        fields.push(html! { <div>{"_"}</div> });
                         continue;
                     }
 
                     match field[0] {
-                        game::Entity::Zombie(_) => { fields.push(html!{<div>{"Z"}</div>}); }
-                        game::Entity::Turret => { fields.push(html!{<div>{"T"}</div>}); }
-                        game::Entity::Bullet(_) => { fields.push(html!{<div>{"°"}</div>}); }
+                        game::Entity::Zombie(_) => {
+                            fields.push(html! {<div>{"Z"}</div>});
+                        }
+                        game::Entity::Turret => {
+                            fields.push(html! {<div>{"T"}</div>});
+                        }
+                        game::Entity::Bullet(_) => {
+                            fields.push(html! {<div>{"°"}</div>});
+                        }
                     }
                 }
-            },
-            None => {},
+            }
+            None => {}
         }
 
         let fields_as_html = fields.into_iter().collect::<Html>();
 
-        lanes.push(html!{
+        lanes.push(html! {
             <>
                 <div class="flex flex-row gap-2">
                     <div>{"Lane "}{i+1}{":"}</div>
