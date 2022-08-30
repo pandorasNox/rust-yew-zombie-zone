@@ -49,6 +49,7 @@ fn app() -> Html {
     html! {
         <>
             <h1>{"Welcome to the Zombie Zone"}</h1>
+            <div>{"tick: "}{state.tick}</div>
             <Grid />
             <div class="">
                 <button onclick={reset} type="button" class="py-[.688rem] px-4 inline-flex justify-center items-center gap-2 rounded-md border-2 border-gray-200 font-semibold text-white hover:text-black hover:bg-white hover:border-white-500 focus:outline-none focus:ring-2 focus:ring-white-500 focus:ring-offset-2 transition-all text-sm dark:border-gray-700 dark:hover:border-white-500">
@@ -81,9 +82,9 @@ fn grid() -> Html {
                     }
 
                     match field[0] {
-                        game::Entity::Zombie => { fields.push(html!{<div>{"Z"}</div>}); }
+                        game::Entity::Zombie(_) => { fields.push(html!{<div>{"Z"}</div>}); }
                         game::Entity::Turret => { fields.push(html!{<div>{"T"}</div>}); }
-                        game::Entity::Bullet => { fields.push(html!{<div>{"°"}</div>}); }
+                        game::Entity::Bullet(_) => { fields.push(html!{<div>{"°"}</div>}); }
                     }
                 }
             },
