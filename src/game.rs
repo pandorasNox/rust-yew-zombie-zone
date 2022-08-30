@@ -39,23 +39,29 @@ impl Entity {
         mut opt_prev_field: Option<Field>,
     ) -> (Field, Option<Field>) {
         match opt_prev_field {
-            Some(Field(mut prev_field)) => {
-                let field_is_empty = prev_field.len() == 0;
-                if field_is_empty {
-                    current_field.pop_front();
-                    prev_field.push_back(Entity::Zombie(current_tick));
-
-                    return (current_field, Some(Field(prev_field)));
-                } else {
-                    //todo:
-                    return (current_field, Some(Field(prev_field)));
-                }
-            }
-            None => {
+            None => { /* prev is end of lane */
                 //todo:
                 //end of lane, hit player
                 current_field.pop_front();
                 return (current_field, None);
+            }
+            Some(Field(mut prev_field)) => {
+                match prev_field.front() {
+                    None => { /* prev is empty */
+                        current_field.pop_front();
+                        prev_field.push_back(Entity::Zombie(current_tick));
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                    Some(Entity::Bullet(_)) => { /* zombie walks into the bullet */
+                        current_field.pop_front();
+                        prev_field.pop_front();
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                    _ => {
+                        //todo:
+                        return (current_field, Some(Field(prev_field)));
+                    }
+                }
             }
         }
     }
@@ -257,6 +263,27 @@ impl core::ops::DerefMut for Field {
         &mut self.0
     }
 }
+
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
+// ############################################################################
 
 #[cfg(test)]
 mod tests {
@@ -613,4 +640,50 @@ mod tests {
         assert_eq!(&true, &third_lane.0[2].is_empty());
         assert_eq!(&true, &third_lane.0[3].is_empty());
     }
+
+    #[test]
+    fn zombie_walks_into_bullet() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Bullet(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::from([Entity::Zombie(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Bullet(0)])),
+            &third_lane.0[0]
+        );
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Zombie(0)])),
+            &third_lane.0[2]
+        );
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+        assert_eq!(&true, &third_lane.0[0].is_empty());
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+        assert_eq!(&true, &third_lane.0[2].is_empty());
+        assert_eq!(&true, &third_lane.0[3].is_empty());
+    }
+
 }
