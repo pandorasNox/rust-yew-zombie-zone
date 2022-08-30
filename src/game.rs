@@ -8,6 +8,7 @@ pub struct State {
     tick_interval_ms: u16,
     pub tick: Tick,
     pub grid: Grid,
+    spawn_rates: SpawnRates,
 }
 
 type Tick = u32;
@@ -30,6 +31,12 @@ pub enum Entity {
 
 type LastMovedTick = Tick;
 
+#[derive(Clone, PartialEq)]
+struct SpawnRates {
+    zombies_each_x_ticks: Tick,
+    bullets_each_x_ticks: Tick,
+}
+
 impl Entity {
     //todo: maybe should be moved to Lane? (as Entity should probabbly not know about the lane logic and fields...)
     fn move_zombie(
@@ -39,7 +46,8 @@ impl Entity {
         mut opt_prev_field: Option<Field>,
     ) -> (Field, Option<Field>) {
         match opt_prev_field {
-            None => { /* prev is end of lane */
+            None => {
+                /* prev is end of lane */
                 //todo:
                 //end of lane, hit player
                 current_field.pop_front();
@@ -47,12 +55,14 @@ impl Entity {
             }
             Some(Field(mut prev_field)) => {
                 match prev_field.front() {
-                    None => { /* prev is empty */
+                    None => {
+                        /* prev is empty */
                         current_field.pop_front();
                         prev_field.push_back(Entity::Zombie(current_tick));
                         return (current_field, Some(Field(prev_field)));
                     }
-                    Some(Entity::Bullet(_)) => { /* zombie walks into the bullet */
+                    Some(Entity::Bullet(_)) => {
+                        /* zombie walks into the bullet */
                         current_field.pop_front();
                         prev_field.pop_front();
                         return (current_field, Some(Field(prev_field)));
@@ -74,6 +84,10 @@ impl std::default::Default for State {
         State {
             tick: 0,
             tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 2,
+            },
             grid: Grid([
                 None,
                 None,
@@ -102,6 +116,10 @@ impl State {
         State {
             tick: 0,
             tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             // lane: Lane(Default::default()), //needs #[derive(Default)] on Field
             // lane: Lane(std::array::from_fn(|_| Field(VecDeque::new()))), //creates an array by repeatedly calling the closure
 
@@ -113,15 +131,15 @@ impl State {
 
     pub fn next(&mut self) {
         self.tick += 1;
-        self.grid = State::grid_next(self.grid.clone(), self.tick);
+        self.grid = State::grid_next(self.grid.clone(), self.tick, &self.spawn_rates);
     }
 
-    fn grid_next(mut grid: Grid, tick: u32) -> Grid {
+    fn grid_next(mut grid: Grid, tick: u32, spawn_rates: &SpawnRates) -> Grid {
         for i in 0..grid.len() {
             let opt_lane = grid[i].clone();
             match opt_lane {
                 Some(lane) => {
-                    grid[i] = Some(State::lane_next(lane, tick));
+                    grid[i] = Some(State::lane_next(lane, tick, &spawn_rates));
                 }
                 None => {}
             }
@@ -130,7 +148,7 @@ impl State {
         grid
     }
 
-    fn lane_next(mut lane: Lane, tick: u32) -> Lane {
+    fn lane_next(mut lane: Lane, tick: u32, spawn_rates: &SpawnRates) -> Lane {
         for i in 0..lane.len() {
             let Field(mut current_field) = lane[i].clone();
             let opt_prev_field = if i == 0 {
@@ -176,11 +194,10 @@ impl State {
                     }
                 }
                 Some(Entity::Turret) => {
-                    let (t_current, t_next) = Lane::process_turret(
-                        tick,
-                        Field(current_field),
-                        opt_next_field,
-                    );
+                    let (t_current, t_next) =
+                        Lane::process_turret(
+                            tick, spawn_rates, Field(current_field), opt_next_field
+                        );
 
                     lane[i] = t_current;
                     if i_next < lane.len() && t_next != None {
@@ -215,7 +232,8 @@ impl Lane {
 
                         return (current_field, Some(Field(next_field)));
                     }
-                    Some(Entity::Zombie(_)) => { /* hit zombie */
+                    Some(Entity::Zombie(_)) => {
+                        /* hit zombie */
                         current_field.pop_front();
                         next_field.pop_front();
                         return (current_field, Some(Field(next_field)));
@@ -235,16 +253,23 @@ impl Lane {
 
     fn process_turret(
         current_tick: Tick,
+        spawn_rates: &SpawnRates,
         mut current_field: Field,
         mut opt_next_field: Option<Field>,
     ) -> (Field, Option<Field>) {
+        if current_tick % spawn_rates.bullets_each_x_ticks != 0 {
+            return (current_field, opt_next_field);
+        }
+
         match opt_next_field {
-            None => { /* end of lane, do nothing? */
+            None => {
+                /* end of lane, do nothing? */
                 return (current_field, opt_next_field);
             }
             Some(mut next_field) => {
                 match next_field.front() {
-                    None => { /* next is empty */
+                    None => {
+                        /* next is empty */
                         next_field.push_back(Entity::Bullet(current_tick));
                         return (current_field, Some(next_field));
                     }
@@ -376,6 +401,11 @@ mod tests {
     fn two_zombies_move_left() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -393,8 +423,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
-            // ..Default::default()
         };
 
         let mut grid = state.clone().grid;
@@ -424,6 +452,11 @@ mod tests {
     fn two_zombies_leaves_lane() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -441,8 +474,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
-            // ..Default::default()
         };
 
         let mut grid = state.clone().grid;
@@ -476,6 +507,11 @@ mod tests {
     fn one_bullet_move_right() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -493,7 +529,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
@@ -528,6 +563,11 @@ mod tests {
     fn two_bullets_move_right() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -545,7 +585,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
@@ -589,6 +628,11 @@ mod tests {
     fn bullets_leave_the_lane() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -606,7 +650,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
@@ -640,6 +683,11 @@ mod tests {
     fn bullet_hits_zombie() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -657,7 +705,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
@@ -685,6 +732,11 @@ mod tests {
     fn zombie_walks_into_bullet() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -702,7 +754,6 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
@@ -730,6 +781,11 @@ mod tests {
     fn turret_spawns_bullet() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -747,27 +803,20 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
         let mut third_lane = grid[2].as_ref().unwrap();
         // let lane_field = &lane.0[8];
 
-        assert_eq!(
-            &Field(VecDeque::from([Entity::Turret])),
-            &third_lane.0[0]
-        );
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
         assert_eq!(&true, &third_lane.0[1].is_empty());
 
         state.next();
         grid = state.grid.clone();
         third_lane = grid[2].as_ref().unwrap();
 
-        assert_eq!(
-            &Field(VecDeque::from([Entity::Turret])),
-            &third_lane.0[0]
-        );
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
         assert_eq!(
             &Field(VecDeque::from([Entity::Bullet(1)])),
             &third_lane.0[1]
@@ -781,6 +830,11 @@ mod tests {
     fn turret_hits_zombie() {
         let mut state = State {
             tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 1,
+            },
             grid: Grid([
                 None,
                 None,
@@ -798,17 +852,13 @@ mod tests {
                 None,
                 None,
             ]),
-            tick_interval_ms: 700,
         };
 
         let mut grid = state.clone().grid;
         let mut third_lane = grid[2].as_ref().unwrap();
         // let lane_field = &lane.0[8];
 
-        assert_eq!(
-            &Field(VecDeque::from([Entity::Turret])),
-            &third_lane.0[0]
-        );
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
         assert_eq!(
             &Field(VecDeque::from([Entity::Zombie(0)])),
             &third_lane.0[1]
@@ -818,14 +868,66 @@ mod tests {
         grid = state.grid.clone();
         third_lane = grid[2].as_ref().unwrap();
 
-        assert_eq!(
-            &Field(VecDeque::from([Entity::Turret])),
-            &third_lane.0[0]
-        );
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
         assert_eq!(&true, &third_lane.0[1].is_empty());
         assert_eq!(&true, &third_lane.0[2].is_empty());
         assert_eq!(&true, &third_lane.0[3].is_empty());
         assert_eq!(&true, &third_lane.0[4].is_empty());
     }
 
+    #[test]
+    fn turret_spawns_bullet_every_2nd_tick() {
+        let mut state = State {
+            tick: 0,
+            tick_interval_ms: 700,
+            spawn_rates: SpawnRates {
+                zombies_each_x_ticks: 1,
+                bullets_each_x_ticks: 2,
+            },
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Turret])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+
+        assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Bullet(2)])),
+            &third_lane.0[1]
+        );
+        assert_eq!(&true, &third_lane.0[2].is_empty());
+        assert_eq!(&true, &third_lane.0[3].is_empty());
+        assert_eq!(&true, &third_lane.0[4].is_empty());
+    }
 }
