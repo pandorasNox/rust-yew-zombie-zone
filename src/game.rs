@@ -175,6 +175,18 @@ impl State {
                         lane[i_next] = b_next.unwrap();
                     }
                 }
+                Some(Entity::Turret) => {
+                    let (t_current, t_next) = Lane::process_turret(
+                        tick,
+                        Field(current_field),
+                        opt_next_field,
+                    );
+
+                    lane[i] = t_current;
+                    if i_next < lane.len() && t_next != None {
+                        lane[i_next] = t_next.unwrap();
+                    }
+                }
                 _ => {}
             }
         }
@@ -217,6 +229,34 @@ impl Lane {
             None => {
                 current_field.pop_front();
                 return (current_field, opt_next_field);
+            }
+        }
+    }
+
+    fn process_turret(
+        current_tick: Tick,
+        mut current_field: Field,
+        mut opt_next_field: Option<Field>,
+    ) -> (Field, Option<Field>) {
+        match opt_next_field {
+            None => { /* end of lane, do nothing? */
+                return (current_field, opt_next_field);
+            }
+            Some(mut next_field) => {
+                match next_field.front() {
+                    None => { /* next is empty */
+                        next_field.push_back(Entity::Bullet(current_tick));
+                        return (current_field, Some(next_field));
+                    }
+                    Some(Entity::Zombie(_)) => {
+                        next_field.pop_front();
+                        return (current_field, Some(next_field));
+                    }
+                    _ => {
+                        next_field.push_back(Entity::Bullet(current_tick));
+                        return (current_field, Some(next_field));
+                    }
+                }
             }
         }
     }
@@ -684,6 +724,108 @@ mod tests {
         assert_eq!(&true, &third_lane.0[1].is_empty());
         assert_eq!(&true, &third_lane.0[2].is_empty());
         assert_eq!(&true, &third_lane.0[3].is_empty());
+    }
+
+    #[test]
+    fn turret_spawns_bullet() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Turret])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Turret])),
+            &third_lane.0[0]
+        );
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Turret])),
+            &third_lane.0[0]
+        );
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Bullet(1)])),
+            &third_lane.0[1]
+        );
+        assert_eq!(&true, &third_lane.0[2].is_empty());
+        assert_eq!(&true, &third_lane.0[3].is_empty());
+        assert_eq!(&true, &third_lane.0[4].is_empty());
+    }
+
+    #[test]
+    fn turret_hits_zombie() {
+        let mut state = State {
+            tick: 0,
+            grid: Grid([
+                None,
+                None,
+                Some(Lane([
+                    Field(VecDeque::from([Entity::Turret])),
+                    Field(VecDeque::from([Entity::Zombie(0)])),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                    Field(VecDeque::new()),
+                ])),
+                None,
+                None,
+            ]),
+            tick_interval_ms: 700,
+        };
+
+        let mut grid = state.clone().grid;
+        let mut third_lane = grid[2].as_ref().unwrap();
+        // let lane_field = &lane.0[8];
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Turret])),
+            &third_lane.0[0]
+        );
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Zombie(0)])),
+            &third_lane.0[1]
+        );
+
+        state.next();
+        grid = state.grid.clone();
+        third_lane = grid[2].as_ref().unwrap();
+
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Turret])),
+            &third_lane.0[0]
+        );
+        assert_eq!(&true, &third_lane.0[1].is_empty());
+        assert_eq!(&true, &third_lane.0[2].is_empty());
+        assert_eq!(&true, &third_lane.0[3].is_empty());
+        assert_eq!(&true, &third_lane.0[4].is_empty());
     }
 
 }
