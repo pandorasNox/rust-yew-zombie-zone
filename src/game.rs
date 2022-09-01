@@ -789,7 +789,10 @@ mod tests {
         third_lane = grid[2].as_ref().unwrap();
         assert_eq!(&true, &third_lane.0[0].is_empty());
         assert_eq!(&true, &third_lane.0[1].is_empty());
-        assert_eq!(&true, &third_lane.0[2].is_empty());
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Collision])),
+            &third_lane.0[2]
+        );
         assert_eq!(&true, &third_lane.0[3].is_empty());
     }
 
@@ -837,7 +840,10 @@ mod tests {
         grid = state.grid.clone();
         third_lane = grid[2].as_ref().unwrap();
         assert_eq!(&true, &third_lane.0[0].is_empty());
-        assert_eq!(&true, &third_lane.0[1].is_empty());
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Collision])),
+            &third_lane.0[1]
+        );
         assert_eq!(&true, &third_lane.0[2].is_empty());
         assert_eq!(&true, &third_lane.0[3].is_empty());
     }
@@ -934,7 +940,10 @@ mod tests {
         third_lane = grid[2].as_ref().unwrap();
 
         assert_eq!(&Field(VecDeque::from([Entity::Turret])), &third_lane.0[0]);
-        assert_eq!(&true, &third_lane.0[1].is_empty());
+        assert_eq!(
+            &Field(VecDeque::from([Entity::Collision])),
+            &third_lane.0[1]
+        );
         assert_eq!(&true, &third_lane.0[2].is_empty());
         assert_eq!(&true, &third_lane.0[3].is_empty());
         assert_eq!(&true, &third_lane.0[4].is_empty());
