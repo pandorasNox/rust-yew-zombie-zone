@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque};
 
 use yewdux::prelude::*;
 
@@ -13,16 +13,16 @@ pub struct State {
 
 type Tick = u32;
 
-#[derive(Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Grid([Option<Lane>; 5]);
 
-#[derive(Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Lane([Field; 9]);
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Field(pub VecDeque<Entity>);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entity {
     Zombie(LastMovedTick),
     Turret,
@@ -100,7 +100,7 @@ impl State {
             let opt_lane = grid[i].clone();
             match opt_lane {
                 Some(lane) => {
-                    grid[i] = Some(State::lane_next(lane, tick, &spawn_rates));
+                    grid[i] = Some(State::lane_next(lane, tick, spawn_rates));
                 }
                 None => {}
             }
@@ -147,7 +147,7 @@ impl State {
         lane = State::remove_lane_collisions(lane);
 
         for i in 0..lane.len() {
-            let Field(mut current_field) = lane[i].clone();
+            let Field(current_field) = lane[i].clone();
             let opt_prev_field = if i == 0 {
                 None
             } else {
@@ -214,14 +214,10 @@ impl State {
         for i in 0..lane.len() {
             let mut field = (&lane[i]).clone();
 
-            match field.front() {
-                Some(Entity::Collision) => {
-                    field.pop_front();
-                    lane[i] = field;
-                }
-                _ => {}
+            if field.front() == Some(&Entity::Collision) {
+                field.pop_front();
+                lane[i] = field;
             }
-
         }
 
         return lane;
@@ -230,10 +226,10 @@ impl State {
 
 impl Lane {
     fn move_zombie(
-        entity: Entity,
+        _entity: Entity,
         current_tick: Tick,
         mut current_field: Field,
-        mut opt_prev_field: Option<Field>,
+        opt_prev_field: Option<Field>,
     ) -> (Field, Option<Field>) {
         match opt_prev_field {
             None => {
@@ -278,7 +274,7 @@ impl Lane {
         entity_last_moved_tick: Tick,
         current_tick: Tick,
         mut current_field: Field,
-        mut opt_next_field: Option<Field>,
+        opt_next_field: Option<Field>,
     ) -> (Field, Option<Field>) {
         if entity_last_moved_tick == current_tick {
             return (current_field, opt_next_field);
@@ -316,8 +312,8 @@ impl Lane {
     fn process_turret(
         current_tick: Tick,
         spawn_rates: &SpawnRates,
-        mut current_field: Field,
-        mut opt_next_field: Option<Field>,
+        current_field: Field,
+        opt_next_field: Option<Field>,
     ) -> (Field, Option<Field>) {
         if spawn_rates.bullets_each_x_ticks == 0 ||
             current_tick % spawn_rates.bullets_each_x_ticks != 0

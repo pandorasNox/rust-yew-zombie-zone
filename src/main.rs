@@ -1,6 +1,5 @@
 use std::rc::Rc;
 
-use log::info;
 use yew::{prelude::*, virtual_dom::VNode};
 use yewdux::prelude::*;
 
@@ -34,8 +33,6 @@ impl Reducer<game::State> for Msg {
                 return Rc::new(state.clone());
             }
         }
-
-        return Rc::new(state.clone());
     }
 }
 
@@ -76,7 +73,7 @@ fn grid() -> Html {
                 for i in 0..lane.len() {
                     let game::Field(field) = lane[i].clone();
 
-                    if field.len() == 0 {
+                    if field.is_empty() {
                         fields.push(html! { <div>{"_"}</div> });
                         continue;
                     }
